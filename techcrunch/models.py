@@ -204,3 +204,40 @@ class SearchByKeyword(BaseModel):
 
     def __str__(self):
         return f'{self.keyword.title}: {self.page_count}'
+
+
+class PostSearchByKeywordItem(BaseModel):
+    search_by_keyword = models.ForeignKey(
+        SearchByKeyword,
+        related_name='group_search_by_keyword_items',
+        on_delete=models.CASCADE
+    )
+    post = models.ForeignKey(
+        Post,
+        related_name='posts',
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE
+    )
+    title = models.CharField(max_length=250,
+                             blank=False,
+                             null=False,
+                             verbose_name="Title",
+                             )
+    slug = models.CharField(max_length=250,
+                            blank=False,
+                            null=False,
+                            verbose_name="Title",
+                            )
+    is_scraped = models.BooleanField(default=False,
+                                     blank=False,
+                                     null=False,
+                                     verbose_name="Is scraped",
+                                     )
+
+    class Meta:
+        verbose_name = 'Post Search By Keyword Item'
+        verbose_name_plural = 'Post Search By Keyword Items'
+
+    def __str__(self):
+        return f'{self.title} : {self.slug}'
