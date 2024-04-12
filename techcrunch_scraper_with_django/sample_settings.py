@@ -6,4 +6,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+DEFAULT_SEARCH_PAGE_COUNT = 5
+
 ADMIN_PATH = 'admin/'

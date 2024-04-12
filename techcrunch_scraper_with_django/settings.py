@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 from .local_settings import *
 import os
+from enum import Enum
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,7 +33,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # TrustedApps
-
 
     # My Apss
     'techcrunch.apps.TechcrunchConfig',
@@ -85,16 +85,20 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+                'UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+                'MinimumLengthValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+                'CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+                'NumericPasswordValidator',
     },
 ]
 
@@ -118,3 +122,52 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# User constants
+
+
+TIME_OUT = 15
+DATA_PER_PAGE = '&per_page=100'
+
+BASE_URL = 'https://www.techcrunch.com/'
+JSON_PATH = 'wp-json/wp/v2/'
+URL_FOR_SCRAPE = (BASE_URL + JSON_PATH + '{field}{filter_field}{filter_value}'
+                                         '{data_per_page}'
+                                         '{page}'
+                                         '{envelope}'
+                                         '{embed}'
+
+                  )
+
+SEARCH_BASE_URL = 'https://search.techcrunch.com/'
+SEARCH_URL = (SEARCH_BASE_URL + 'search?p={keyword}&b={page}1')
+
+
+class ItemTypes(Enum):
+    POST = 'posts'
+    CATEGORY = 'categories'
+    AUTHOR = 'users'
+
+
+class ItemAttributeTypes(Enum):
+    ID = '/'
+    SLUG = '?slug='
+    CATEGORY = '?categories='
+    NONE = ''
+
+
+class EnvelopeStatuses(Enum):
+    TRUE = '&_envelope=true'
+    FALSE = '&_envelope=false'
+
+
+class EmbedStatuses(Enum):
+    TRUE = '&_embed=true'
+    FALSE = '&_embed=false'
+    NONE = ''
+
+
+class AutoScrapLastPage(Enum):
+    POST = 499
+    CATEGORY = 3
+    AUTHOR = 7
