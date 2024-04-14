@@ -1,0 +1,39 @@
+{% extends 'techcrunch/base.html' %}
+
+{% block content %}
+
+
+
+{% if user.is_authenticated %}
+    <style>
+        h1 {
+          text-align: center;
+        }
+
+        h2 {
+          text-align: center;
+        }
+    </style>
+    <h1>You're logged in</h1>
+    <br/>
+    <h2>Please Press Search</h2>
+{% else %}
+    <style>
+        h1 {
+          text-align: center;
+        }
+
+        h2 {
+          text-align: center;
+        }
+    </style>
+    <h1>Welcome To Article Browser Website</h1>
+    <br/>
+    <h2>Please Login OR Register To Enjoy</h2>
+
+
+
+{% endif %}
+
+
+{% endblock %}

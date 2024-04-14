@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 from .local_settings import *
 import os
-from enum import Enum
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +32,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # TrustedApps
+    'django_celery_beat',
+    'django_celery_results',
 
     # My Apss
     'techcrunch.apps.TechcrunchConfig',
@@ -55,7 +56,7 @@ ROOT_URLCONF = 'techcrunch_scraper_with_django.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'template')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -115,8 +116,14 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = 'static/'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = 'media/'
+
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -126,48 +133,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # User constants
 
 
-TIME_OUT = 15
-DATA_PER_PAGE = '&per_page=100'
-
-BASE_URL = 'https://www.techcrunch.com/'
-JSON_PATH = 'wp-json/wp/v2/'
-URL_FOR_SCRAPE = (BASE_URL + JSON_PATH + '{field}{filter_field}{filter_value}'
-                                         '{data_per_page}'
-                                         '{page}'
-                                         '{envelope}'
-                                         '{embed}'
-
-                  )
-
-SEARCH_BASE_URL = 'https://search.techcrunch.com/'
-SEARCH_URL = (SEARCH_BASE_URL + 'search?p={keyword}&b={page}1')
 
 
-class ItemTypes(Enum):
-    POST = 'posts'
-    CATEGORY = 'categories'
-    AUTHOR = 'users'
+# Celery Configuration Options
+CELERY_BROKER_URL = "amqp://guest:guest@localhost:5672//"
+CELERY_TIMEZONE = 'Asia/Tehran'
+CELERY_TASK_TIME_LIMIT = 60 * 60
 
-
-class ItemAttributeTypes(Enum):
-    ID = '/'
-    SLUG = '?slug='
-    CATEGORY = '?categories='
-    NONE = ''
-
-
-class EnvelopeStatuses(Enum):
-    TRUE = '&_envelope=true'
-    FALSE = '&_envelope=false'
-
-
-class EmbedStatuses(Enum):
-    TRUE = '&_embed=true'
-    FALSE = '&_embed=false'
-    NONE = ''
-
-
-class AutoScrapLastPage(Enum):
-    POST = 499
-    CATEGORY = 3
-    AUTHOR = 7
+CELERY_RESULT_BACKEND = 'django-db'
+# CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'

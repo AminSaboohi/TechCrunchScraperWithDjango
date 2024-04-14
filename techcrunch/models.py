@@ -1,8 +1,13 @@
 from abc import abstractmethod
-from django.db import models
+
 from django.conf import settings
-from django.utils.html import mark_safe
 from django.contrib.auth import get_user_model
+from django.db import models
+from django.utils.html import mark_safe
+from tempfile import NamedTemporaryFile
+from urllib.request import urlopen
+from django.core.files import File
+import os
 
 # Create your models here.
 User = get_user_model()
@@ -52,12 +57,14 @@ class Author(BaseModel):
                             null=False,
                             verbose_name="Link"
                             )
-    avatar_link = models.CharField(max_length=250,
-                                   blank=False,
-                                   null=False,
-                                   verbose_name="Position"
-                                   )
-    avatar_image = models.ImageField(upload_to='images')
+    image_link = models.URLField(max_length=250,
+                                 blank=False,
+                                 null=False,
+                                 verbose_name="Position"
+                                 )
+    image = models.ImageField(upload_to='images/',
+                              default=f'{slug}.png',
+                              blank=True, )
 
     class Meta:
         verbose_name = 'Author'
@@ -66,14 +73,30 @@ class Author(BaseModel):
     def __str__(self):
         return f'Author: {self.name}, {self.position}'
 
+    def get_remote_image(self):
+        if self.image_link and not self.image:
+            img_temp = NamedTemporaryFile(delete=True)
+
+            fd = os.open(f"image_{self.pk}.png", os.O_RDWR)
+            print("Blocking Mode:", os.get_blocking(fd))
+            blocking = False
+            os.set_blocking(fd, blocking)
+            print("Blocking mode changed")
+            print("Blocking Mode:", os.get_blocking(fd))
+
+            # close the file descriptor
+
+            img_temp.write(urlopen(self.image_link).read())
+            img_temp.flush()
+            self.image.save(f"image_{self.pk}.png", File(img_temp), save=True)
+            self.save()
+            os.close(fd)
+
     def img_preview(self):  # new
-        return mark_safe(
-            '<img src = "{url}" width = "{width}" height="{height}"/>'.format(
-                url=self.avatar_image.url,
-                width=300,
-                height=300,
-            )
-        )
+        return mark_safe(f'<img src="/images/{self.image}"'
+                         f'" width="150" height="150" />')
+
+    img_preview.short_description = 'Image'
 
 
 class Category(BaseModel):
@@ -136,16 +159,18 @@ class Post(BaseModel):
                                verbose_name="Content",
                                )
     link = models.CharField(max_length=250,
-                            blank=False,
+                            blank=True,
                             null=False,
                             verbose_name="Link",
                             )
-    image_link = models.CharField(max_length=250,
-                                  blank=False,
-                                  null=False,
-                                  verbose_name="Image link",
-                                  )
-    image = models.ImageField(upload_to='images')
+    image_link = models.URLField(max_length=250,
+                                 blank=True,
+                                 null=False,
+                                 verbose_name="Image link",
+                                 )
+    image = models.ImageField(upload_to='images/',
+                              default=f'image.png',
+                              blank=True)
 
     class Meta:
         verbose_name = 'Post'
@@ -153,15 +178,6 @@ class Post(BaseModel):
 
     def __str__(self):
         return f'Post: {self.title}'
-
-    def img_preview(self):  # new
-        return mark_safe(
-            '<img src = "{url}" width = "{width}" height="{height}"/>'.format(
-                url=self.image.url,
-                width=300,
-                height=300,
-            )
-        )
 
 
 class PostCategory(BaseModel):
@@ -220,11 +236,6 @@ class Keyword(BaseModel):
 
 
 class SearchByKeyword(BaseModel):
-    user = models.ForeignKey(User,
-                             related_name='searches',
-                             on_delete=models.PROTECT,
-                             verbose_name="User",
-                             )
     keyword = models.ForeignKey(Keyword,
                                 related_name='searches',
                                 on_delete=models.CASCADE,
@@ -242,7 +253,7 @@ class SearchByKeyword(BaseModel):
         verbose_name_plural = 'Search By Keywords'
 
     def __str__(self):
-        return f'{self.user} searches {self.keyword.title}: {self.page_count}'
+        return f'searches {self.keyword.title}: {self.page_count}'
 
 
 class PostSearchByKeywordItem(BaseModel):
@@ -256,6 +267,8 @@ class PostSearchByKeywordItem(BaseModel):
         Post,
         related_name='post_search_by_keyword_items',
         on_delete=models.CASCADE,
+        blank=True,
+        null=True,
         verbose_name="Post",
     )
     slug = models.CharField(max_length=250,
@@ -268,6 +281,11 @@ class PostSearchByKeywordItem(BaseModel):
                                      null=False,
                                      verbose_name="Is scraped",
                                      )
+    fail_count = models.IntegerField(default=0,
+                                     blank=False,
+                                     null=False,
+                                     verbose_name="Fail count",
+                                     )
 
     class Meta:
         verbose_name = 'Post Search By Keyword Item'
@@ -275,6 +293,39 @@ class PostSearchByKeywordItem(BaseModel):
 
     def __str__(self):
         return f'Post Search By Keyword : slug = {self.slug}'
+
+
+class PostSearchDailyItem(BaseModel):
+    post = models.ForeignKey(
+        Post,
+        related_name='post_search_daily_items',
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        verbose_name="Post",
+    )
+    slug = models.CharField(max_length=250,
+                            blank=False,
+                            null=False,
+                            verbose_name="Slug",
+                            )
+    is_scraped = models.BooleanField(default=False,
+                                     blank=False,
+                                     null=False,
+                                     verbose_name="Is scraped",
+                                     )
+    fail_count = models.IntegerField(default=0,
+                                     blank=False,
+                                     null=False,
+                                     verbose_name="Fail count",
+                                     )
+
+    class Meta:
+        verbose_name = 'Post Search Daily Item'
+        verbose_name_plural = 'Post Search Daily Items'
+
+    def __str__(self):
+        return f'Post Search Daily : slug = {self.slug}'
 
 
 class AutoScrap(BaseModel):
@@ -314,12 +365,18 @@ class AutoScrapPostItem(BaseModel):
     posts = models.ManyToManyField(
         Post,
         related_name='auto_scrap_category_items',
+        blank=True,
         verbose_name='Posts'
     )
     is_scraped = models.BooleanField(default=False,
                                      blank=False,
                                      null=False,
                                      verbose_name="Is scraped",
+                                     )
+    fail_count = models.IntegerField(default=0,
+                                     blank=False,
+                                     null=False,
+                                     verbose_name="Fail count",
                                      )
 
     class Meta:
@@ -341,12 +398,18 @@ class AutoScrapCategoryItem(BaseModel):
     categories = models.ManyToManyField(
         Category,
         related_name='auto_scrap_category_items',
+        blank=True,
         verbose_name='Categories'
     )
     is_scraped = models.BooleanField(default=False,
                                      blank=False,
                                      null=False,
                                      verbose_name="Is scraped",
+                                     )
+    fail_count = models.IntegerField(default=0,
+                                     blank=False,
+                                     null=False,
+                                     verbose_name="Fail count",
                                      )
 
     class Meta:
@@ -368,12 +431,18 @@ class AutoScrapAuthorItem(BaseModel):
     authors = models.ManyToManyField(
         Author,
         related_name='auto_scrap_author_items',
+        blank=True,
         verbose_name='Authors'
     )
     is_scraped = models.BooleanField(default=False,
                                      blank=False,
                                      null=False,
                                      verbose_name="Is scraped",
+                                     )
+    fail_count = models.IntegerField(default=0,
+                                     blank=False,
+                                     null=False,
+                                     verbose_name="Fail count",
                                      )
 
     class Meta:
